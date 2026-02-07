@@ -153,18 +153,18 @@ bot.start();
 
 // 3. Ethers Listener
 const provider = new ethers.providers.JsonRpcProvider("https://sepolia-rollup.arbitrum.io/rpc");
-const abi = ["event ConfidentialAlertTriggered(address indexed user, string messageType)"];
+const abi = ["event ConfidentialAlert(address indexed user, string indexed category, string message, bytes metadata)"];
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
 
-contract.on("ConfidentialAlertTriggered", async (user: string, messageType: string) => {
-  console.log(`Alert triggered for ${user}: ${messageType}`);
+contract.on("ConfidentialAlert", async (user: string, category: string, message: string, metadata: string) => {
+  console.log(`Alert [${category}] triggered for ${user}: ${message}`);
   const protectedDataAddress = subscriptionMap.get(user.toLowerCase());
   
   if (protectedDataAddress) {
     try {
       await web3telegram.sendTelegram({
         graphQLQuery: `query { protectedData(id: "${protectedDataAddress}") { id } }`,
-        telegramContent: `Privibase Alert: ${messageType} triggered on Arbitrum Sepolia.`,
+        telegramContent: `🔔 *Privibase Alert [${category}]*\n\n${message}\n\n_Source: Arbitrum Sepolia_`,
       });
       console.log(`Notification sent to ${protectedDataAddress}`);
     } catch (error) {
