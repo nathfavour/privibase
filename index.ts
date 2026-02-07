@@ -2,8 +2,18 @@ import { Bot } from "grammy";
 import { IExecWeb3telegram } from "@iexec/web3telegram";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
+import * as fs from "fs";
+import * as path from "path";
 
 dotenv.config();
+
+const DATA_DIR = path.join(process.cwd(), "data");
+const DB_PATH = path.join(DATA_DIR, "subscriptions.json");
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR);
+}
 
 const {
   PRIVATE_KEY,
@@ -16,18 +26,37 @@ if (!PRIVATE_KEY || !TELEGRAM_BOT_TOKEN || !CONTRACT_ADDRESS) {
   process.exit(1);
 }
 
-// iExec Arbitrum Sepolia Config (Standard)
-const IEXEC_ORACLE_ASSET_ID = "0x..."; // Placeholder if needed, but web3telegram usually handles it
-
 // 1. Initialize iExec Web3Telegram
 const web3telegram = new IExecWeb3telegram(PRIVATE_KEY);
 
 // 2. Initialize grammY bot
 const bot = new Bot(TELEGRAM_BOT_TOKEN);
 
-// Local Map: ETH_ADDRESS -> PROTECTED_DATA_ADDRESS
-// In a real TEE, this might be handled differently, but for the scaffold we use a local map.
-const subscriptionMap = new Map<string, string>();
+// Persistence Logic
+let subscriptionMap = new Map<string, string>();
+
+function loadDb() {
+  if (fs.existsSync(DB_PATH)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
+      subscriptionMap = new Map(Object.entries(data));
+      console.log(`Loaded ${subscriptionMap.size} subscriptions from DB`);
+    } catch (e) {
+      console.error("Failed to load DB:", e);
+    }
+  }
+}
+
+function saveDb() {
+  try {
+    const obj = Object.fromEntries(subscriptionMap);
+    fs.writeFileSync(DB_PATH, JSON.stringify(obj, null, 2));
+  } catch (e) {
+    console.error("Failed to save DB:", e);
+  }
+}
+
+loadDb();
 
 bot.command("start", (ctx) => ctx.reply("Welcome to Privibase! Use /subscribe <protectedDataAddress> to receive confidential notifications."));
 
@@ -50,6 +79,7 @@ bot.on("message:text", (ctx) => {
     const [ethAddress, protectedDataAddress] = text.split(":").map(s => s.trim().toLowerCase());
     if (ethers.utils.isAddress(ethAddress) && ethers.utils.isAddress(protectedDataAddress)) {
       subscriptionMap.set(ethAddress, protectedDataAddress);
+      saveDb();
       ctx.reply(`Successfully subscribed ${ethAddress} to notifications!`);
     } else {
       ctx.reply("Invalid addresses. Please use format: <ethAddress>:<protectedDataAddress>");

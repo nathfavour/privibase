@@ -1,0 +1,11 @@
+services:
+  privibase:
+    build: .
+    container_name: privibase-daemon
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data # For persistence if the Map is moved to a file-based DB later

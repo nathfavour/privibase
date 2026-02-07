@@ -23,6 +23,17 @@ Privibase is a decentralized notification daemon designed for the iExec x 50Part
 2.  Set up `.env` (see `.env.example`)
 3.  `bun run index.ts` or build the standalone binary: `bun run build`
 
+## Self-Hosting
+
+Privibase is designed for easy self-hosting. You can run it directly as a binary or via Docker.
+
+### Using Docker
+1.  Configure your `.env` file.
+2.  Launch the infrastructure:
+    ```bash
+    docker-compose up -d
+    ```
+
 ## Build Pipeline
 
 The project compiles into a single-binary daemon using Bun's native compilation:
